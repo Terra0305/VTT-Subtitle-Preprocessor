@@ -108,11 +108,12 @@ def create_final_vtt_files(en_path, kr_path, en_output_path, kr_output_path):
 
 
 #'가시_en_1.vtt'와 '가시_kr_1.vtt'를 작업하려면 '가시'라고 적으면 됨
-file_basename = '관상' # <--- 여기만 수정하시면 됩니다.
+file_basename = '가문의위기' # <--- 여기만 수정하시면 됩니다.
 
-# --- 폴더 설정 
-input_folder = 'Input_vtt'
-output_folder = 'Output_vtt'
+# --- 폴더 설정 (어디서 실행해도 되도록 절대 경로로 수정) ---
+script_dir = os.path.dirname(os.path.abspath(__file__))
+input_folder = os.path.join(script_dir, 'Input_vtt')
+output_folder = os.path.join(script_dir, 'Output_vtt')
 
 # 출력 폴더가 없으면 자동으로 생성
 os.makedirs(output_folder, exist_ok=True)
