@@ -1,58 +1,58 @@
-# VTT Subtitle Preprocessor (VTT 자막 전처리기)
+# VTT 자막 전처리기 (VTT Subtitle Preprocessor)
 
-A simple and effective Python script to clean, parse, and synchronize dual-language (English/Korean) `.vtt` subtitle files for data analysis. This project was initially created to preprocess subtitle data for a project with GIST (Gwangju Institute of Science and Technology).
-
----
-
-## ✨ Key Features
-
-* **Metadata Removal:** Automatically removes non-dialogue lines such as headers and production credits.
-* **Text Cleaning:** Deletes bracketed text `[...]` `(...)` and unnecessary special characters.
-* **Timestamp Synchronization:** Aligns the timestamps of the Korean subtitle file to match the English file, ensuring perfect 1:1 cue correspondence.
-* **Structured I/O:** Reads raw `.vtt` files from an `Input_vtt` directory and saves the processed files to an `Output_vtt` directory.
-* **Typo Correction:** Includes a function to fix predefined common typos in the Korean subtitles.
+파이썬으로 만든 자막(`.vtt`) 전처리 스크립트입니다. 2개 국어(영어/한국어) 자막 파일의 불필요한 텍스트를 제거하고, 싱크를 동기화하여 데이터 분석에 용이한 형태로 가공합니다. 이 프로젝트는 광주과학기술원(GIST)과의 데이터 전처리 작업에서 시작되었습니다.
 
 ---
 
-## 🛠️ Tech Stack
+## ✨ 주요 기능
+
+* **메타데이터 제거:** 자막 상단의 `WEBVTT` 헤더나 제작 정보 등 대사가 아닌 줄을 자동으로 삭제합니다.
+* **텍스트 정제:** 괄호 `[...]` `(...)` 와 그 안의 내용, 불필요한 특수문자들을 깔끔하게 제거합니다.
+* **타임스탬프 동기화:** 한국어 자막의 타임스탬프를 영어 자막 기준으로 정확하게 통일하여 1:1로 대응시킵니다.
+* **구조화된 입출력:** `Input_vtt` 폴더에서 원본 파일을 읽어 `Output_vtt` 폴더에 결과물을 저장합니다.
+* **오타 수정:** 미리 정의된 간단한 한국어 오타 규칙을 적용하여 수정합니다.
+
+---
+
+## 🛠️ 사용 기술
 
 * **Python 3**
-* Built-in libraries: `re`, `os`
+* 기본 내장 라이브러리: `re`, `os`
 
 ---
 
-## 🚀 How to Use
+## 🚀 사용 방법
 
-1.  **Prepare Your Files:**
-    * Place your raw English (`*_en_1.vtt`) and Korean (`*_kr_1.vtt`) subtitle files inside the `Input_vtt` folder.
-    * The script `All-in-One.py` should be in the root directory, alongside the `Input_vtt` and `Output_vtt` folders.
+1.  **폴더 및 파일 준비:**
+    * `Input_vtt` 폴더 안에 원본 영어(`*_en_1.vtt`), 한국어(`*_kr_1.vtt`) 자막 파일을 넣어주세요.
+    * `All-in-One.py` 스크립트는 `Input_vtt`, `Output_vtt` 폴더와 같은 위치에 있어야 합니다.
 
     ```
     .
     ├── 📁 Input_vtt
-    │   ├── movie_en_1.vtt
-    │   └── movie_kr_1.vtt
+    │   ├── 영화_en_1.vtt
+    │   └── 영화_kr_1.vtt
     ├── 📁 Output_vtt
     └── 🐍 All-in-One.py
     ```
 
-2.  **Set the Target File:**
-    * Open the `All-in-One.py` script.
-    * Find the following line and change the filename base to the one you want to process.
+2.  **처리할 파일 지정:**
+    * `All-in-One.py` 스크립트 파일을 열어주세요.
+    * 아래 코드 부분을 찾아서 처리하고 싶은 파일의 기본 이름으로 수정합니다.
 
     ```python
-    # Change 'movie' to your file's base name
-    file_basename = 'movie' 
+    # '영화' 부분을 원하는 파일의 기본 이름으로 수정
+    file_basename = '영화' 
     ```
 
-3.  **Run the Script:**
-    * Execute the script from your terminal.
+3.  **스크립트 실행:**
+    * 터미널에서 아래 명령어를 입력하여 스크립트를 실행합니다.
 
     ```bash
     python All-in-One.py
     ```
 
-4.  **Check the Output:**
-    * The processed `*_en_FINAL.vtt` and `*_kr_FINAL.vtt` files will be saved in the `Output_vtt` folder.
+4.  **결과 확인:**
+    * `Output_vtt` 폴더 안에 전처리가 완료된 `*_en_FINAL.vtt`, `*_kr_FINAL.vtt` 파일이 생성됩니다.
 
 ---
