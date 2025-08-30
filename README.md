@@ -3,6 +3,7 @@
 파이썬으로 만든 자막(`.vtt`) 전처리 스크립트입니다. 2개 국어(영어/한국어) 자막 파일의 불필요한 텍스트를 제거하고, 싱크를 동기화하여 데이터 분석에 용이한 형태로 가공합니다. 
 본 프로젝트는 광주과학기술원(GIST)의 의뢰를 받아 진행한 자막 데이터 전처리 프로젝트입니다.
 
+의뢰 메뉴얼 : https://gisto365-my.sharepoint.com/:p:/g/personal/dayeonku_gm_gist_ac_kr/EZliRteKzklEgWgb8k-NoA8B38RxcY2NTdq5peTTU1Iz4Q?rtime=cGxCanzn3Ug
 ---
 
 ## ✨ 주요 기능
