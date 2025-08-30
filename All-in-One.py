@@ -108,7 +108,7 @@ def create_final_vtt_files(en_path, kr_path, en_output_path, kr_output_path):
 
 
 #'가시_en_1.vtt'와 '가시_kr_1.vtt'를 작업하려면 '가시'라고 적으면 됨
-file_basename = '가시' # <--- 여기만 수정하면 됨!
+file_basename = '관상' # <--- 여기만 수정하시면 됩니다.
 
 # --- 폴더 설정 
 input_folder = 'Input_vtt'
@@ -118,8 +118,8 @@ output_folder = 'Output_vtt'
 os.makedirs(output_folder, exist_ok=True)
 
 # 설정된 기본 이름을 바탕으로 전체 파일 경로 생성
-original_en_vtt = os.path.join(input_folder, f'{file_basename}_en_1.vtt')
-original_kr_vtt = os.path.join(input_folder, f'{file_basename}_kr_1.vtt')
+original_en_vtt = os.path.join(input_folder, f'{file_basename}_en.vtt')
+original_kr_vtt = os.path.join(input_folder, f'{file_basename}_kr.vtt')
 final_en_output = os.path.join(output_folder, f'{file_basename}_en_FINAL.vtt')
 final_kr_output = os.path.join(output_folder, f'{file_basename}_kr_FINAL.vtt')
 
