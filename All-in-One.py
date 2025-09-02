@@ -294,7 +294,7 @@ def process_vtt_files(en_path, kr_path, typo_dict, en_output_path, kr_output_pat
 # --- 스크립트 실행 부분 ---
 if __name__ == "__main__":
     # ⭐️ 여기만 수정해서 사용 ⭐️
-    file_basename = '관상' 
+    file_basename = '7번방의선물' 
 
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
