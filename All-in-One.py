@@ -294,7 +294,7 @@ def process_vtt_files(en_path, kr_path, typo_dict, en_output_path, kr_output_pat
 # --- 스크립트 실행 부분 ---
 if __name__ == "__main__":
     # ⭐️ 여기만 수정해서 사용 ⭐️
-    file_basename = '검사외전' 
+    file_basename = '간신' 
 
     try:
         script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -307,8 +307,8 @@ if __name__ == "__main__":
     os.makedirs(output_folder, exist_ok=True)
 
     typo_csv_path = os.path.join(script_dir, 'typos.csv')
-    original_en_vtt = os.path.join(input_folder, f'{file_basename}_en.vtt')
-    original_kr_vtt = os.path.join(input_folder, f'{file_basename}_kr.vtt')
+    original_en_vtt = os.path.join(input_folder, f'{file_basename}_en_1.vtt')
+    original_kr_vtt = os.path.join(input_folder, f'{file_basename}_kr_1.vtt')
     final_en_output = os.path.join(output_folder, f'{file_basename}_en_FINAL.vtt')
     final_kr_output = os.path.join(output_folder, f'{file_basename}_kr_FINAL.vtt')
 
