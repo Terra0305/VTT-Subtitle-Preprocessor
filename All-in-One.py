@@ -3,12 +3,11 @@ import os
 import csv
 from datetime import timedelta
 
-# --- 유틸리티 함수들 ---
+# --- Utility Functions ---
 
 def time_to_seconds(time_str):
-    """VTT 시간 형식('HH:MM:SS.mmm')을 초(float)로 변환"""
+    """Converts VTT time format ('HH:MM:SS.mmm') to seconds (float)."""
     try:
-        # 쉼표(,)를 점(.)으로 일관되게 변경
         time_str_cleaned = time_str.replace(',', '.')
         parts = time_str_cleaned.split(':')
         h = int(parts[0])
@@ -18,14 +17,13 @@ def time_to_seconds(time_str):
         ms = int(s_ms[1]) if len(s_ms) > 1 else 0
         return h * 3600 + m * 60 + s + ms / 1000.0
     except (ValueError, IndexError) as e:
-        print(f"경고: 잘못된 시간 형식 '{time_str}'. 0초로 처리합니다. 오류: {e}")
+        print(f"Warning: Invalid time format '{time_str}'. Treating as 0 seconds. Error: {e}")
         return 0.0
 
 def seconds_to_time(seconds):
-    """초(float)를 VTT 시간 형식('HH:MM:SS.mmm')으로 변환"""
+    """Converts seconds (float) to VTT time format ('HH:MM:SS.mmm')."""
     if seconds < 0:
         seconds = 0
-    # round to nearest millisecond to avoid precision issues
     total_milliseconds = round(seconds * 1000)
     
     hours, remainder = divmod(total_milliseconds, 3600000)
@@ -35,44 +33,47 @@ def seconds_to_time(seconds):
     return f"{int(hours):02d}:{int(minutes):02d}:{int(seconds):02d}.{int(milliseconds):03d}"
 
 def load_typo_dict_from_csv(file_path):
-    """CSV 파일에서 오타 사전을 불러옴"""
+    """Loads a typo dictionary from a CSV file."""
     typo_dict = {}
     try:
-        with open(file_path, 'r', encoding='utf-8-sig') as f: # utf-8-sig for BOM
+        with open(file_path, 'r', encoding='utf-8-sig') as f:
             reader = csv.reader(f)
-            next(reader)  # 헤더 건너뛰기
+            next(reader)
             for row in reader:
                 if len(row) == 2:
                     typo, correction = row
                     typo_dict[typo.strip()] = correction.strip()
     except FileNotFoundError:
-        print(f"경고: '{file_path}' 오타 사전을 찾을 수 없음. 오타 수정 없이 진행합니다.")
+        print(f"Warning: Typo dictionary '{file_path}' not found. Proceeding without typo correction.")
     except Exception as e:
-        print(f"오류: 오타 사전 파일 처리 중 오류 발생 - {e}")
+        print(f"Error: An error occurred while processing the typo dictionary file - {e}")
     return typo_dict
 
 def correct_korean_typos(text, typo_dict):
-    """주어진 오타 사전을 바탕으로 텍스트의 오타를 수정"""
+    """Corrects typos in the text based on the provided dictionary."""
+    # Process specific known broken characters first
+    text = text.replace("又", "또") # Example of fixing a broken character
+    
     for typo, correction in typo_dict.items():
         text = text.replace(typo, correction)
     return text
 
-# --- 핵심 로직 함수들 ---
+# --- Core Logic Functions ---
 
 def parse_and_clean_vtt(file_path):
-    """VTT 파일을 읽고 파싱 및 클리닝하여 CUE 리스트 반환"""
+    """Reads, parses, and cleans a VTT file, returning a list of cues."""
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             lines = f.readlines()
     except FileNotFoundError:
-        print(f"오류: '{file_path}' 파일을 찾을 수 없습니다.")
+        print(f"Error: File '{file_path}' not found.")
         return []
     
-    # NOTE: 배우 이름 등은 대문자로만 이뤄진 경우가 많으므로 키워드에 추가
     non_dialogue_keywords = [
         "배급:", "제공:", "감독:", "제작:", "각본:", "출연:", "공동제작",
         "Presented by", "Director:", "Production:", "Screenplay:", "Starring:",
-        "LOTTE ENTERTAINTAINMENT", "A TPS COMPANY", "WEBVTT", "Kind:", "Language:",
+        "LOTTE ENTERTAINMENT", "A TPS COMPANY", "WEBVTT", "Kind:", "Language:",
+        "ANNALS OF THE JOSEON DYNASTY", "THE TREACHEROUS", "NEUNGJU"
     ]
 
     cues = []
@@ -102,20 +103,16 @@ def parse_and_clean_vtt(file_path):
                 continue
         elif not stripped_line or stripped_line.isdigit():
             continue
-        # non_dialogue_keywords에 포함된 단어가 있으면 해당 큐 전체를 건너뛰기
         elif any(keyword.lower() in stripped_line.lower() for keyword in non_dialogue_keywords):
-            current_cue = None # 이 키워드가 포함된 큐는 아예 시작하지 않음
+            current_cue = None
             continue
         elif current_cue is not None:
-             # 배경 정보 (e.g. "THE GORYEO ERA...") 제거 - 영어 대문자와 콜론(:) 조합
-            if re.match(r'^[A-Z\s,:]+$', stripped_line):
-                continue
-
-            # 괄호 및 메뉴얼에 명시된 특수문자 제거
+            if re.match(r'^[A-Z0-9\s,.:\-]+$', stripped_line) and len(re.findall(r'[a-z]', stripped_line)) < 3:
+                 continue
+            
             processed_line = re.sub(r'\[.*?\]|\(.*?\)', '', stripped_line)
             processed_line = re.sub(r'[#♪&]', '', processed_line)
             
-            # 따옴표로만 이루어진 라인(배우 이름) 제거
             if re.fullmatch(r'"[A-Z\s,-]+"', processed_line):
                 continue
             
@@ -130,170 +127,149 @@ def parse_and_clean_vtt(file_path):
     return cues
 
 def merge_cues_in_group(group):
-    """자막 그룹을 병합하여 하나의 자막으로 만듦"""
+    """Merges a group of cues into a single cue."""
     if not group:
         return None
     
-    # 그룹 내 모든 자막의 최소 시작 시간과 최대 종료 시간 계산
     start_sec = min(c['start_sec'] for c in group)
     end_sec = max(c['end_sec'] for c in group)
     
-    # 텍스트를 시간 순서대로 정렬하여 병합
     sorted_group = sorted(group, key=lambda x: x['start_sec'])
     text = " ".join(c['text'] for c in sorted_group)
     
     return {'start_sec': start_sec, 'end_sec': end_sec, 'text': text}
 
 def synchronize_cues(en_cues, kr_cues):
-    """어순 차이를 고려하여 겹치는 자막들을 그룹화하고 동기화"""
+    """
+    Groups and synchronizes overlapping cues with added constraints to prevent over-merging.
+    """
+    # --- CONFIGURATION ---
+    # Maximum time gap between two cues to be considered part of the same group
+    MAX_TIME_GAP_SECONDS = 1.0 
+    # Maximum total duration for a single merged group
+    MAX_GROUP_DURATION_SECONDS = 15.0 
+
     synced_pairs = []
     
-    # 이미 처리된 한국어 자막 인덱스를 추적
+    used_en_indices = set()
     used_kr_indices = set()
 
-    print("\n시간대 겹침 기준 자막 그룹화 및 동기화 시작...")
+    print("\nStarting cue synchronization with improved grouping logic...")
 
-    for i, en_cue in enumerate(en_cues):
-        
-        overlapping_group_en = [en_cue]
-        overlapping_group_kr = []
-        
-        # 현재 영어 자막과 겹치는 한국어 자막 찾기
-        for j, kr_cue in enumerate(kr_cues):
-            if j in used_kr_indices:
-                continue
-            
-            overlap_start = max(en_cue['start_sec'], kr_cue['start_sec'])
-            overlap_end = min(en_cue['end_sec'], kr_cue['end_sec'])
-            
-            if overlap_end > overlap_start:
-                overlapping_group_kr.append(kr_cue)
-        
-        # 겹치는 한국어 자막이 없으면 다음 영어 자막으로
-        if not overlapping_group_kr:
+    for i in range(len(en_cues)):
+        if i in used_en_indices:
             continue
 
-        # --- 그룹 확장 ---
-        # 겹치는 한국어 자막들과 또 겹치는 다른 영어/한국어 자막들을 찾아 그룹 확장
-        while True:
-            new_en_found = False
-            new_kr_found = False
+        # Start a new potential group with the current English cue
+        group_en_indices = {i}
+        group_kr_indices = set()
+        
+        # --- Group Expansion ---
+        queue_to_check = [('en', i)]
+        
+        while queue_to_check:
+            lang, current_idx = queue_to_check.pop(0)
 
-            # 1. 현재 그룹의 한국어 자막들과 겹치는 새로운 영어 자막 찾기
-            group_kr_start = min(c['start_sec'] for c in overlapping_group_kr)
-            group_kr_end = max(c['end_sec'] for c in overlapping_group_kr)
+            if lang == 'en':
+                current_cue_obj = en_cues[current_idx]
+                target_cues = kr_cues
+                target_indices_set = group_kr_indices
+                used_target_indices = used_kr_indices
+                next_lang = 'kr'
+            else: # lang == 'kr'
+                current_cue_obj = kr_cues[current_idx]
+                target_cues = en_cues
+                target_indices_set = group_en_indices
+                used_target_indices = used_en_indices
+                next_lang = 'en'
             
-            for en2_idx, en2_cue in enumerate(en_cues):
-                if en2_cue in overlapping_group_en:
+            for j, target_cue in enumerate(target_cues):
+                if j in used_target_indices or j in target_indices_set:
                     continue
                 
-                if max(group_kr_start, en2_cue['start_sec']) < min(group_kr_end, en2_cue['end_sec']):
-                    overlapping_group_en.append(en2_cue)
-                    new_en_found = True
-            
-            # 2. 현재 그룹의 영어 자막들과 겹치는 새로운 한국어 자막 찾기
-            group_en_start = min(c['start_sec'] for c in overlapping_group_en)
-            group_en_end = max(c['end_sec'] for c in overlapping_group_en)
+                # Check for overlap or very close proximity
+                gap = max(current_cue_obj['start_sec'], target_cue['start_sec']) - min(current_cue_obj['end_sec'], target_cue['end_sec'])
+                
+                # Condition to add to group: must overlap or be very close
+                if gap < MAX_TIME_GAP_SECONDS:
+                    # Check if adding this cue exceeds the max duration
+                    potential_group_start = min(en_cues[idx]['start_sec'] for idx in group_en_indices.union({j} if next_lang == 'en' else set()))
+                    potential_group_end = max(en_cues[idx]['end_sec'] for idx in group_en_indices.union({j} if next_lang == 'en' else set()))
+                    
+                    if (potential_group_end - potential_group_start) > MAX_GROUP_DURATION_SECONDS:
+                        continue # Skip adding this cue as it would make the group too long
 
-            for kr2_idx, kr2_cue in enumerate(kr_cues):
-                if kr2_cue in overlapping_group_kr:
-                    continue
+                    target_indices_set.add(j)
+                    queue_to_check.append((next_lang, j))
 
-                if max(group_en_start, kr2_cue['start_sec']) < min(group_en_end, kr2_cue['end_sec']):
-                    overlapping_group_kr.append(kr2_cue)
-                    new_kr_found = True
-            
-            # 더 이상 그룹에 추가될 자막이 없으면 확장 종료
-            if not new_en_found and not new_kr_found:
-                break
-        
-        # 병합된 그룹을 결과에 추가
-        merged_en = merge_cues_in_group(overlapping_group_en)
-        merged_kr = merge_cues_in_group(overlapping_group_kr)
+        if group_en_indices and group_kr_indices:
+            en_group_cues = [en_cues[idx] for idx in group_en_indices]
+            kr_group_cues = [kr_cues[idx] for idx in group_kr_indices]
 
-        if merged_en and merged_kr:
-            # 병합된 그룹의 타임스탬프를 영어 기준으로 통일
-            merged_kr['start_sec'] = merged_en['start_sec']
-            merged_kr['end_sec'] = merged_en['end_sec']
-            
-            # 중복 추가 방지
-            is_duplicate = False
-            for pair in synced_pairs:
-                if pair['en_cue']['start_sec'] == merged_en['start_sec'] and pair['en_cue']['text'] == merged_en['text']:
-                    is_duplicate = True
-                    break
-            
-            if not is_duplicate:
+            merged_en = merge_cues_in_group(en_group_cues)
+            merged_kr = merge_cues_in_group(kr_group_cues)
+
+            if merged_en and merged_kr:
+                merged_kr['start_sec'] = merged_en['start_sec']
+                merged_kr['end_sec'] = merged_en['end_sec']
+                
                 synced_pairs.append({'en_cue': merged_en, 'kr_cue': merged_kr})
 
-                # 이 그룹에 포함된 모든 한국어 자막을 '사용됨'으로 표시
-                for kr_cue_in_group in overlapping_group_kr:
-                    for kr_idx, original_kr_cue in enumerate(kr_cues):
-                        if kr_cue_in_group == original_kr_cue:
-                            used_kr_indices.add(kr_idx)
-                            break
+                used_en_indices.update(group_en_indices)
+                used_kr_indices.update(group_kr_indices)
     
-    # 최종 결과를 시간순으로 정렬
     synced_pairs.sort(key=lambda x: x['en_cue']['start_sec'])
 
-    print(f"총 {len(synced_pairs)}개의 동기화된 자막 그룹을 생성했습니다.")
+    print(f"Successfully created {len(synced_pairs)} synchronized cue groups.")
     return synced_pairs
 
-# --- 메인 실행 함수 ---
+# --- Main Execution Function ---
 
 def process_vtt_files(en_path, kr_path, typo_dict, en_output_path, kr_output_path):
-    """전체 VTT 전처리 및 동기화 파이프라인 실행"""
+    """Executes the full VTT preprocessing and synchronization pipeline."""
     
-    # 1. 각 언어 파일 파싱 및 클리닝
     en_cues = parse_and_clean_vtt(en_path)
     kr_cues = parse_and_clean_vtt(kr_path)
-    print(f"파일 로딩 및 클리닝 완료: 영어 {len(en_cues)}개, 한국어 {len(kr_cues)}개 CUE")
+    print(f"File loading and cleaning complete: {len(en_cues)} English cues, {len(kr_cues)} Korean cues.")
 
     if not en_cues or not kr_cues:
-        print("오류: 유효한 CUE를 찾지 못했습니다. 처리를 중단합니다.")
+        print("Error: No valid cues found. Aborting process.")
         return
 
-    # 2. CUE 동기화 (그룹화 및 병합 로직 사용)
     synced_data = synchronize_cues(en_cues, kr_cues)
 
-    # 3. 최종 VTT 파일 생성
-    # 영어 파일
-    with open(en_output_path, 'w', encoding='utf-8') as f_en:
+    with open(en_output_path, 'w', encoding='utf-8') as f_en, \
+         open(kr_output_path, 'w', encoding='utf-8') as f_kr:
+        
         f_en.write("WEBVTT\n\n")
-        for i, pair in enumerate(synced_data):
-            cue = pair['en_cue']
-            start_time = seconds_to_time(cue['start_sec'])
-            end_time = seconds_to_time(cue['end_sec'])
-            f_en.write(f"{i+1}\n")
-            f_en.write(f"{start_time} --> {end_time}\n")
-            f_en.write(f"{cue['text']}\n\n")
-    
-    # 한국어 파일
-    with open(kr_output_path, 'w', encoding='utf-8') as f_kr:
         f_kr.write("WEBVTT\n\n")
+        
         for i, pair in enumerate(synced_data):
+            en_cue = pair['en_cue']
             kr_cue = pair['kr_cue']
-            en_cue = pair['en_cue'] # 타임스탬프는 영어 기준
-            
-            # 오타 수정 적용
-            corrected_kr_text = correct_korean_typos(kr_cue['text'], typo_dict)
             
             start_time = seconds_to_time(en_cue['start_sec'])
             end_time = seconds_to_time(en_cue['end_sec'])
-
+            
+            # Write English cue
+            f_en.write(f"{i+1}\n")
+            f_en.write(f"{start_time} --> {end_time}\n")
+            f_en.write(f"{en_cue['text']}\n\n")
+            
+            # Correct typos and write Korean cue
+            corrected_kr_text = correct_korean_typos(kr_cue['text'], typo_dict)
             f_kr.write(f"{i+1}\n")
             f_kr.write(f"{start_time} --> {end_time}\n")
             f_kr.write(f"{corrected_kr_text}\n\n")
             
     print("-" * 30)
-    print("처리 완료!")
-    print(f"영어 최종 파일: '{en_output_path}'")
-    print(f"한국어 최종 파일: '{kr_output_path}'")
+    print("Processing complete!")
+    print(f"Final English file: '{en_output_path}'")
+    print(f"Final Korean file: '{kr_output_path}'")
 
 
-# --- 스크립트 실행 부분 ---
+# --- Script Execution Section ---
 if __name__ == "__main__":
-    # ⭐️ 여기만 수정해서 사용 ⭐️
     file_basename = '간신' 
 
     try:
@@ -301,7 +277,6 @@ if __name__ == "__main__":
     except NameError:
         script_dir = os.getcwd()
 
-    # 폴더 및 파일 경로 설정
     input_folder = os.path.join(script_dir, 'Input_vtt')
     output_folder = os.path.join(script_dir, 'Output_vtt')
     os.makedirs(output_folder, exist_ok=True)
@@ -316,7 +291,7 @@ if __name__ == "__main__":
         typo_dictionary = load_typo_dict_from_csv(typo_csv_path)
         process_vtt_files(original_en_vtt, original_kr_vtt, typo_dictionary, final_en_output, final_kr_output)
     else:
-        print(f"오류: 입력 파일을 찾을 수 없습니다.")
-        print(f"  - 영어 파일 경로: '{original_en_vtt}'")
-        print(f"  - 한국어 파일 경로: '{original_kr_vtt}'")
-        print(f"'{input_folder}' 폴더에 파일이 있는지 확인해주세요.")
+        print(f"Error: Input files not found.")
+        print(f"  - English file path: '{original_en_vtt}'")
+        print(f"  - Korean file path: '{original_kr_vtt}'")
+        print(f"Please check if the files exist in the '{input_folder}' folder.")
